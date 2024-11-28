@@ -1,0 +1,33 @@
+name: BCP47 Fetcher
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo content
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.TOKEN }}
+
+      - name: setup python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install httpx
+
+      - name: Generate BCP47 Data
+        run : |
+          python ${{ github.workspace }}/iana_bcp47/fetcher.py
+
+      - name: Commit Latest BCP47 Data
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: [Actions] Update BCP47 Data
+          branch: main
+          create_branch: true
+          commit_options: '--no-verify --signoff'
+          file_pattern: 'bcp47.json bcp47.py language-subtag-registry.txt'
+          repository: .
