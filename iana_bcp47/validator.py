@@ -31,13 +31,13 @@ def validate_bcp47(tag) -> str | None:
     # Validate remaining subtags
     for subtag in subtags:
         if subtag in extlang_codes:
-            full_description += f" {extlang_codes[subtag]}"
+            full_description += f" - {extlang_codes[subtag]}"
         elif subtag in script_codes:
-            full_description += f" {script_codes[subtag]}"
+            full_description += f" - {script_codes[subtag]}"
         elif subtag in region_codes:
-            full_description += f" {region_codes[subtag]}"
+            full_description += f" - {region_codes[subtag]}"
         elif subtag in variant_codes:
-            full_description += f" {variant_codes[subtag]}"
+            full_description += f" - {variant_codes[subtag]}"
         else:
             # Invalid subtag
             return None
