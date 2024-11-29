@@ -1,11 +1,13 @@
 import httpx
 import json
+import os
+import sys
 
 from collections import defaultdict
 
-
 # URL of the IANA language subtag registry
 url = "https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry"
+
 
 def parse_language_subtag_registry(data: str) -> list:
     """
@@ -82,6 +84,7 @@ def fetch_and_save_registry() -> None:
     Fetch the IANA language subtag registry file and save it to a text file.
     :return: Void
     """
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     response = httpx.get(url)
     if response.status_code == 200:
         raw_data = response.text
@@ -118,6 +121,7 @@ def fetch_and_save_registry() -> None:
         print("Successfully fetched and saved the registry file.")
     else:
         print("Failed to fetch the registry file.")
+
 
 if __name__ == "__main__":
     fetch_and_save_registry()
