@@ -29,5 +29,5 @@ jobs:
           branch: main
           create_branch: true
           commit_options: '--no-verify --signoff'
-          file_pattern: 'bcp47.json bcp47.py language-subtag-registry.txt'
+          file_pattern: 'bcp47.py language-subtag-registry.txt'
           repository: .

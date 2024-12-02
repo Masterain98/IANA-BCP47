@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="iana-bcp47",
     version="0.1.0",
-    author="Allen 'Masterain' Zhang",
+    author="Masterain98",
     author_email="i@irain.in",
     description="A Python package to validate BCP47 language tags",
     long_description=open("README.md", "r", encoding="utf-8").read(),

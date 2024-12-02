@@ -93,12 +93,7 @@ def fetch_and_save_registry() -> None:
         with open("language-subtag-registry.txt", "w", encoding="utf-8") as f:
             f.write(raw_data)
 
-        # Save the filtered data to a JSON file
-        with open("bcp47.json", "w", encoding="utf-8") as f:
-            json.dump(filtered_data, f, indent=4, ensure_ascii=False)
-
         type_dicts = defaultdict(dict)
-
         for entry in filtered_data:
             entry_type = entry.get("Type")
             key = entry.get("Subtag", entry.get("Tag"))
