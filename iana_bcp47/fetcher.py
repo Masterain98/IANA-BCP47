@@ -1,13 +1,10 @@
 import httpx
-import json
 import os
-import sys
-
 from collections import defaultdict
+
 
 # URL of the IANA language subtag registry
 url = "https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry"
-
 
 def parse_language_subtag_registry(data: str) -> list:
     """
