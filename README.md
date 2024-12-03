@@ -36,7 +36,9 @@ The project uses a generated Python module (`bcp47.py`) containing dictionaries 
 
 Use the `validate_bcp47` function to validate a language tag and retrieve its description.
 
-`pip install iana-bcp47`
+```console
+pip install iana-bcp47
+```
 
 ```python
 from iana_bcp47.validator import validate_bcp47
