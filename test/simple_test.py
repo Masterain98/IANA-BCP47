@@ -15,5 +15,5 @@ if __name__ == "__main__":
     ]
 
     for lang_tag in test_tags:
-        result = validate_bcp47(lang_tag)
-        print(f"Tag '{lang_tag}' is {'valid: ' + result if result else 'invalid'}.")
+        valid, msg = validate_bcp47(lang_tag)
+        print(f"Tag '{lang_tag}' is {'valid: ' + msg if valid else 'invalid'}.")

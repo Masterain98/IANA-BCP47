@@ -866,11 +866,11 @@ languages = {
 }
 
 
-if __name__ == "__main":
+if __name__ == "__main__":
     import warnings
     from iana_bcp47.validator import validate_bcp47
 
     for lang, code in languages.items():
-        resp = validate_bcp47(code)
-        if not resp:
-            warnings.warn(f"Invalid BCP47 code for {lang}: {code}")
+        valid, desc = validate_bcp47(code)
+        if not valid:
+            warnings.warn(f"\n{desc}\n{code} is not valid for {lang}")
