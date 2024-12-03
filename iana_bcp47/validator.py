@@ -14,7 +14,7 @@ def validate_bcp47(tag: str) -> tuple[bool, str]:
 
     # Check if the tag matches any redundant cases
     if tag in redundant_codes:
-        return redundant_codes[tag]
+        return True, redundant_codes[tag]
 
     # Split the tag into subtags
     subtags = tag.split('-')
