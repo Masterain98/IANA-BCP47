@@ -86,8 +86,8 @@ jobs:
 
           if git rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
             TAG_SHA="$(git rev-list -n 1 "$TAG")"
-            test "$TAG_SHA" = "$RELEASE_SHA" || {
-              echo "Tag $TAG points to $TAG_SHA, not $RELEASE_SHA." >&2
+            git merge-base --is-ancestor "$TAG_SHA" "$RELEASE_SHA" || {
+              echo "Tag $TAG points to $TAG_SHA, which is not an ancestor of $RELEASE_SHA." >&2
               exit 1
             }
             TAG_NEEDED=false
