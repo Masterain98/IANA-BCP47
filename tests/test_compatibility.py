@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from importlib.metadata import version
+
 import iana_bcp47
 from iana_bcp47.bcp47 import (
     extlang_codes,
@@ -14,7 +16,7 @@ from iana_bcp47.bcp47 import (
 
 def test_public_validator_and_version_are_exposed() -> None:
     assert callable(iana_bcp47.validate_bcp47)
-    assert iana_bcp47.__version__ == "0.2.0"
+    assert iana_bcp47.__version__ == version("iana-bcp47")
 
 
 def test_legacy_dictionaries_remain_available() -> None:

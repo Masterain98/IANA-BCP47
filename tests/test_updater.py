@@ -115,6 +115,14 @@ def test_invalid_utf8_and_truncated_registry_are_rejected() -> None:
         updater.decode_registry(b"File-Date: 2026-01-01\n%%\n")
 
 
+def test_registry_count_sanity_checks_reject_partial_snapshot(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(updater, "MINIMUM_COUNTS", {"language": 3})
+    with pytest.raises(RegistryFormatError, match="count sanity checks"):
+        updater.decode_registry(registry_snapshot("2026-01-01"))
+
+
 class FakeResponse:
     def __init__(self, data: bytes, status: int = 200) -> None:
         self.data = data

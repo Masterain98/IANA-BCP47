@@ -84,4 +84,7 @@ jobs:
         env:
           RESULTS: ${{ join(needs.*.result, ' ') }}
         run: |
-          test "$RESULTS" = "success success success"
+          test -n "$RESULTS"
+          for result in $RESULTS; do
+            test "$result" = success
+          done
