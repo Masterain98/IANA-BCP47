@@ -1,3 +1,59 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "iana-bcp47"
+version = "0.2.0"
+description = "Validate RFC 5646 language tags against the IANA Language Subtag Registry"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+  { name = "Masterain98", email = "i@irain.in" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Typing :: Typed",
+]
+
+[project.urls]
+Homepage = "https://github.com/Masterain98/iana-bcp47"
+Issues = "https://github.com/Masterain98/iana-bcp47/issues"
+Source = "https://github.com/Masterain98/iana-bcp47"
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2.2",
+  "check-wheel-contents>=0.6.2",
+  "pytest>=8.3",
+  "ruff>=0.12",
+  "twine>=6.1",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+iana_bcp47 = ["language-subtag-registry.txt", "py.typed"]
+
+[tool.pytest.ini_options]
+addopts = "-ra"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "UP"]

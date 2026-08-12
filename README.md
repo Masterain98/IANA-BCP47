@@ -1,67 +1,76 @@
-# IANA-BCP47 (BCP47 Validator)
+# IANA-BCP47
 
-This project provides a Python implementation of a [BCP47](https://tools.ietf.org/html/bcp47) language tag validator. It validates language tags based on the IANA Language Subtag Registry and ensures compliance with BCP47 specifications. The validator supports checking for redundant tags and validating custom language codes using dictionaries of subtags.
+`iana-bcp47` validates language tags using the grammar from
+[RFC 5646](https://www.rfc-editor.org/rfc/rfc5646.html) and the bundled
+[IANA Language Subtag Registry](https://www.iana.org/assignments/language-subtag-registry/language-subtag-registry).
+Validation is local and does not require a network connection.
 
 ## Features
 
-- Validates BCP47 language tags with dictionaries derived from the IANA Language Subtag Registry.
-- Supports validation for the following subtag types:
-  - `language`
-  - `extlang`
-  - `script`
-  - `region`
-  - `variant`
-  - `redundant`
-- Provides detailed descriptions of valid language tags.
-- **Returns `None` for invalid tags.**
+- Case-insensitive RFC 5646 syntax and ordering validation.
+- Registered language, extlang, script, region, and variant subtags.
+- Grandfathered and redundant tags.
+- Extensions and private-use tags, including IANA private-use ranges.
+- Deprecated subtags remain valid and include replacement guidance when IANA provides it.
+- Python 3.11 through 3.14.
 
-## How It Works
+Extension payloads are checked against the generic RFC 5646 grammar. This package does not
+interpret extension-specific standards such as Unicode locale extension semantics. Registry
+`Prefix` values are retained as metadata and guidance; RFC 5646 does not make them a validity
+requirement.
 
-The project uses a generated Python module (`bcp47.py`) containing dictionaries for each type of subtag. Each language tag is validated as follows:
-1. The first subtag must match a valid language code.
-2. Subsequent subtags are validated against dictionaries for `extlang`, `script`, `region`, and `variant`.
-3. Redundant tags (full language tags) are checked separately.
-4. Return a tuple with two elements:
-    - The first element is a boolean indicating whether the tag is valid.
-    - The second element is a string describing the language tag or error message if the tag is invalid.
-
-## Usage
-
-> [!IMPORTANT]
->
-> The IANA-BCP47 library validates whether a given string conforms to the BCP 47 standard format. However, it does not verify whether the string represents a practical or commonly used language code. For instance, `ru-US` is a valid BCP 47 format but is not a language code typically used in real-world applications.
-
-
-### Validate a BCP47 Language Tag
-
-Use the `validate_bcp47` function to validate a language tag and retrieve its description.
+## Installation
 
 ```console
 pip install iana-bcp47
 ```
 
+## Usage
+
 ```python
-from iana_bcp47.validator import validate_bcp47
+from iana_bcp47 import validate_bcp47
 
-# Example usage
-tags = ["en", "en-US", "zh-Hant", "zh-Hant-CN", "invalid-tag", 'zh-US']
-
-for tag in tags:
-    valid, msg = validate_bcp47(tag)
-    print(f"Tag '{tag}' is {'valid: ' + msg if valid else 'invalid'}.")
+for tag in ["en-US", "EN-us", "zh-Hant-CN", "i-klingon", "x-private"]:
+    valid, message = validate_bcp47(tag)
+    print(tag, valid, message)
 ```
 
-### Output Example
+`validate_bcp47(tag)` returns `(valid, message)`. Invalid input returns `False` and an error
+message; passing a non-string raises `TypeError`. The wording of descriptions and errors may
+evolve as the IANA registry changes.
 
+The legacy dictionaries remain available from `iana_bcp47.bcp47` and from the package root:
+
+```python
+from iana_bcp47 import language_codes, region_codes
 ```
-Tag 'en' is valid: English.
-Tag 'en-US' is valid: English - United States.
-Tag 'zh-Hant' is valid: traditional Chinese.
-Tag 'zh-Hant-CN' is valid: PRC Mainland Chinese in traditional script.
-Tag 'invalid-tag' is invalid.
-Tag 'zh-US' is valid: Chinese - United States.
+
+## Data maintenance
+
+The packaged registry date can be read from `iana_bcp47._registry.get_registry().file_date`.
+A scheduled GitHub Actions workflow checks IANA every Monday. When the snapshot changes, it
+updates the data, increments the package patch version, runs validation, and opens or refreshes
+an `automation/iana-registry` pull request. A maintainer reviews and merges that PR; a successful
+`main` CI run then publishes the new version through PyPI Trusted Publishing.
+
+To inspect an update locally without modifying files:
+
+```console
+python -m pip install -e ".[dev]"
+python tools/update_registry.py --dry-run
+```
+
+Run the maintenance checks with:
+
+```console
+ruff check .
+ruff format --check .
+pytest
+python -m build
+twine check dist/*
+check-wheel-contents dist/*.whl
 ```
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
+MIT. See [LICENSE](LICENSE).

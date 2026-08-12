@@ -1,0 +1,93 @@
+name: Update IANA registry
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: update-iana-registry
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: main
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: python -m pip install -e ".[dev]"
+
+      - name: Download and validate the current IANA registry
+        env:
+          SUMMARY_FILE: ${{ runner.temp }}/iana-registry-update.md
+        run: python tools/update_registry.py --summary-file "$SUMMARY_FILE"
+
+      - name: Detect changes
+        id: changes
+        shell: bash
+        run: |
+          if git diff --quiet -- pyproject.toml src/iana_bcp47/language-subtag-registry.txt; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate the proposed update
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          ruff check .
+          ruff format --check .
+          python -m pytest
+          python -m build
+          twine check dist/*
+          check-wheel-contents dist/*.whl
+
+      - name: Commit and push the automation branch
+        if: steps.changes.outputs.changed == 'true'
+        shell: bash
+        env:
+          BRANCH: automation/iana-registry
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin "$BRANCH:refs/remotes/origin/$BRANCH" || true
+          git switch -C "$BRANCH"
+          git add pyproject.toml src/iana_bcp47/language-subtag-registry.txt
+          git commit -m "Update IANA Language Subtag Registry"
+          git push --force-with-lease origin "HEAD:$BRANCH"
+
+      - name: Create or refresh the update pull request
+        if: steps.changes.outputs.changed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: automation/iana-registry
+          SUMMARY_FILE: ${{ runner.temp }}/iana-registry-update.md
+        run: |
+          if gh pr view "$BRANCH" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh pr edit "$BRANCH" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "Update IANA Language Subtag Registry" \
+              --body-file "$SUMMARY_FILE"
+          else
+            gh pr create \
+              --repo "$GITHUB_REPOSITORY" \
+              --base main \
+              --head "$BRANCH" \
+              --title "Update IANA Language Subtag Registry" \
+              --body-file "$SUMMARY_FILE"
+          fi
+
+      - name: Record an unchanged snapshot
+        if: steps.changes.outputs.changed == 'false'
+        run: echo "The bundled registry already matches IANA." >> "$GITHUB_STEP_SUMMARY"

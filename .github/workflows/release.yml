@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/iana-bcp47
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      RELEASE_SHA: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+      GH_TOKEN: ${{ github.token }}
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          ref: ${{ env.RELEASE_SHA }}
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+          cache: pip
+      - run: python -m pip install build check-wheel-contents packaging twine
+
+      - name: Require the release commit to be current main
+        shell: bash
+        run: |
+          git fetch origin main
+          test "$(git rev-parse origin/main)" = "$RELEASE_SHA" || {
+            echo "Release SHA $RELEASE_SHA is not the current main commit." >&2
+            exit 1
+          }
+
+      - name: Determine whether a release is needed
+        id: state
+        shell: bash
+        run: |
+          VERSION="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          TAG="v$VERSION"
+          PUBLISH_NEEDED="$(python - "$VERSION" <<'PY'
+          import json
+          import sys
+          import urllib.error
+          import urllib.request
+          from packaging.version import Version
+
+          version = sys.argv[1]
+          try:
+              with urllib.request.urlopen(
+                  "https://pypi.org/pypi/iana-bcp47/json", timeout=30
+              ) as response:
+                  releases = json.load(response)["releases"]
+          except urllib.error.HTTPError as exc:
+              if exc.code != 404:
+                  raise
+              releases = {}
+          if version in releases:
+              print("false")
+          elif not releases:
+              print("true")
+          else:
+              latest = max(map(Version, releases))
+              if Version(version) <= latest:
+                  raise SystemExit(f"Version {version} is not newer than PyPI version {latest}.")
+              print("true")
+          PY
+          )"
+
+          if git rev-parse --verify --quiet "refs/tags/$TAG" >/dev/null; then
+            TAG_SHA="$(git rev-list -n 1 "$TAG")"
+            test "$TAG_SHA" = "$RELEASE_SHA" || {
+              echo "Tag $TAG points to $TAG_SHA, not $RELEASE_SHA." >&2
+              exit 1
+            }
+            TAG_NEEDED=false
+          else
+            TAG_NEEDED=true
+          fi
+
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            RELEASE_EXISTS=true
+          else
+            RELEASE_EXISTS=false
+          fi
+
+          if test "$PUBLISH_NEEDED" = false && test "$RELEASE_EXISTS" = true; then
+            SKIP=true
+          else
+            SKIP=false
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "publish_needed=$PUBLISH_NEEDED" >> "$GITHUB_OUTPUT"
+          echo "tag_needed=$TAG_NEEDED" >> "$GITHUB_OUTPUT"
+          echo "release_exists=$RELEASE_EXISTS" >> "$GITHUB_OUTPUT"
+          echo "skip=$SKIP" >> "$GITHUB_OUTPUT"
+
+      - name: Build and validate distributions
+        if: steps.state.outputs.skip == 'false'
+        run: |
+          python -m build
+          twine check dist/*
+          check-wheel-contents dist/*.whl
+          python -m pip install --force-reinstall dist/*.whl
+          cd "$RUNNER_TEMP"
+          python -c "from iana_bcp47 import validate_bcp47; assert validate_bcp47('en-US')[0]"
+
+      - name: Create the release tag
+        if: steps.state.outputs.skip == 'false' && steps.state.outputs.tag_needed == 'true'
+        shell: bash
+        env:
+          TAG: ${{ steps.state.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag --annotate "$TAG" "$RELEASE_SHA" --message "Release $TAG"
+          git push origin "$TAG"
+
+      - name: Publish to PyPI with Trusted Publishing
+        if: steps.state.outputs.skip == 'false' && steps.state.outputs.publish_needed == 'true'
+        uses: pypa/gh-action-pypi-publish@dc37677b2e1c63e2034f94d8a5b11f265b73ba33 # v1.14.2
+        with:
+          packages-dir: dist/
+
+      - name: Sign distributions with Sigstore
+        if: steps.state.outputs.skip == 'false'
+        uses: sigstore/gh-action-sigstore-python@790bc6befb9d733738f18d8f895854b453640ec9 # v3.5.0
+        with:
+          inputs: >-
+            ./dist/*.tar.gz
+            ./dist/*.whl
+
+      - name: Create or complete the GitHub release
+        if: steps.state.outputs.skip == 'false'
+        shell: bash
+        env:
+          TAG: ${{ steps.state.outputs.tag }}
+          RELEASE_EXISTS: ${{ steps.state.outputs.release_exists }}
+        run: |
+          if test "$RELEASE_EXISTS" = true; then
+            gh release upload "$TAG" dist/** --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$TAG" dist/** \
+              --repo "$GITHUB_REPOSITORY" \
+              --verify-tag \
+              --generate-notes \
+              --title "$TAG"
+          fi
+
+      - name: Record an idempotent no-op
+        if: steps.state.outputs.skip == 'true'
+        run: echo "This version already exists on PyPI and GitHub Releases." >> "$GITHUB_STEP_SUMMARY"

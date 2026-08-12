@@ -1,0 +1,4 @@
+prune .github
+prune tests
+prune tools
+global-exclude __pycache__ *.py[cod] .DS_Store
