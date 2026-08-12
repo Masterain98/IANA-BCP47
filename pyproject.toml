@@ -31,7 +31,7 @@ Source = "https://github.com/Masterain98/iana-bcp47"
 [project.optional-dependencies]
 dev = [
   "build>=1.5.0",
-  "check-wheel-contents>=0.6.2",
+  "check-wheel-contents>=0.6.3",
   "pytest>=9.1.1",
   "ruff>=0.12",
   "twine>=7.0.0",
