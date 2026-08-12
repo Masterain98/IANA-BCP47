@@ -7,6 +7,7 @@ multi-ecosystem-groups:
       day: monday
       time: "04:00"
       timezone: Etc/UTC
+    open-pull-requests-limit: 5
 
 updates:
   - package-ecosystem: github-actions
@@ -17,7 +18,6 @@ updates:
       security-updates:
         applies-to: security-updates
         patterns: ["*"]
-    open-pull-requests-limit: 5
   - package-ecosystem: pip
     directory: /
     patterns: ["*"]
@@ -26,4 +26,3 @@ updates:
       security-updates:
         applies-to: security-updates
         patterns: ["*"]
-    open-pull-requests-limit: 5
