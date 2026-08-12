@@ -85,6 +85,33 @@ def test_packaged_registry_contains_required_record_types() -> None:
     assert registry.lookup("region", "QM") is not None
 
 
+def test_entries_and_registries_are_hashable_without_ignoring_equality() -> None:
+    registry = parse_registry(SAMPLE)
+    entry = registry.lookup("language", "aa")
+    assert entry is not None
+    assert isinstance(hash(entry), int)
+    assert isinstance(hash(registry), int)
+    changed_fields = dict(entry.fields)
+    changed_fields["Description"] = ("Different",)
+    changed_entry = type(entry)(entry.type, entry.identifier, changed_fields)
+    assert changed_entry != entry
+    assert hash(changed_entry) == hash(entry)
+
+
+def test_duplicate_casefolded_identifier_is_rejected() -> None:
+    duplicate = (
+        SAMPLE
+        + """%%
+Type: language
+Subtag: AA
+Description: Duplicate
+Added: 2026-08-08
+"""
+    )
+    with pytest.raises(RegistryFormatError, match="Duplicate language identifier"):
+        parse_registry(duplicate)
+
+
 @pytest.mark.parametrize(
     "text",
     [

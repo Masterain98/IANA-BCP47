@@ -127,8 +127,9 @@ def _replace_pair(
 
     old_registry = registry_path.read_bytes()
     registry_temp = _write_temp(registry_path, registry_data)
-    project_temp = _write_temp(project_path, project_data)
+    project_temp: Path | None = None
     try:
+        project_temp = _write_temp(project_path, project_data)
         os.replace(registry_temp, registry_path)
         try:
             os.replace(project_temp, project_path)
@@ -138,7 +139,8 @@ def _replace_pair(
             raise
     finally:
         registry_temp.unlink(missing_ok=True)
-        project_temp.unlink(missing_ok=True)
+        if project_temp is not None:
+            project_temp.unlink(missing_ok=True)
 
 
 def update_registry(

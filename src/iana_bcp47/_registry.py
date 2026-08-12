@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from functools import cached_property, lru_cache
 from importlib.resources import files
@@ -24,7 +24,7 @@ class RegistryEntry:
 
     type: str
     identifier: str
-    fields: Mapping[str, tuple[str, ...]]
+    fields: Mapping[str, tuple[str, ...]] = field(hash=False)
 
     @property
     def descriptions(self) -> tuple[str, ...]:
@@ -70,7 +70,12 @@ class Registry:
     def by_type(self) -> Mapping[str, Mapping[str, RegistryEntry]]:
         indexes: dict[str, dict[str, RegistryEntry]] = {kind: {} for kind in KNOWN_TYPES}
         for entry in self.entries:
-            indexes[entry.type][entry.identifier.casefold()] = entry
+            key = entry.identifier.casefold()
+            if key in indexes[entry.type]:
+                raise RegistryFormatError(
+                    f"Duplicate {entry.type} identifier {entry.identifier!r} in registry."
+                )
+            indexes[entry.type][key] = entry
         return MappingProxyType(
             {kind: MappingProxyType(entries) for kind, entries in indexes.items()}
         )
@@ -159,7 +164,9 @@ def parse_registry(text: str) -> Registry:
         entries.append(_finish_record(fields))
     if not saw_separator or not entries:
         raise RegistryFormatError("Registry contains no records.")
-    return Registry(file_date=file_date, entries=tuple(entries))
+    registry = Registry(file_date=file_date, entries=tuple(entries))
+    _ = registry.by_type  # Force duplicate detection while parsing.
+    return registry
 
 
 @lru_cache(maxsize=1)

@@ -182,3 +182,26 @@ def test_pair_replacement_rolls_back_first_file(
         updater._replace_pair(registry_path, b"new registry", project_path, b"new project")
     assert registry_path.read_bytes() == old_registry
     assert project_path.read_bytes() == old_project
+
+
+def test_pair_replacement_cleans_registry_temp_when_project_staging_fails(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    registry_path, project_path = make_project(tmp_path)
+    real_write_temp = updater._write_temp
+    registry_temp: Path | None = None
+    calls = 0
+
+    def fail_project_staging(target: Path, data: bytes) -> Path:
+        nonlocal calls, registry_temp
+        calls += 1
+        if calls == 2:
+            raise OSError("simulated project staging failure")
+        registry_temp = real_write_temp(target, data)
+        return registry_temp
+
+    monkeypatch.setattr(updater, "_write_temp", fail_project_staging)
+    with pytest.raises(OSError, match="staging failure"):
+        updater._replace_pair(registry_path, b"new registry", project_path, b"new project")
+    assert registry_temp is not None
+    assert not registry_temp.exists()
