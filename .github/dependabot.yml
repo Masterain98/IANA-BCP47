@@ -1,18 +1,29 @@
 version: 2
-updates:
-  - package-ecosystem: github-actions
-    directory: /
+
+multi-ecosystem-groups:
+  weekly-dependency-updates:
     schedule:
       interval: weekly
       day: monday
       time: "04:00"
       timezone: Etc/UTC
+
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    patterns: ["*"]
+    multi-ecosystem-group: weekly-dependency-updates
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
     open-pull-requests-limit: 5
   - package-ecosystem: pip
     directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "04:30"
-      timezone: Etc/UTC
+    patterns: ["*"]
+    multi-ecosystem-group: weekly-dependency-updates
+    groups:
+      security-updates:
+        applies-to: security-updates
+        patterns: ["*"]
     open-pull-requests-limit: 5
