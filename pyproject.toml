@@ -34,7 +34,7 @@ dev = [
   "check-wheel-contents>=0.6.2",
   "pytest>=8.3",
   "ruff>=0.12",
-  "twine>=6.1",
+  "twine>=7.0.0",
 ]
 
 [tool.setuptools]
